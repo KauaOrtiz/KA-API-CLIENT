@@ -1,5 +1,7 @@
-from flask import Flask, jsonify, request, session, redirect, url_for
-from datetime import datetime, date
+from flask import Flask, json, request, jsonify
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from datetime import datetime, date, timedelta
+
 from bd import (
     createEnterprise, 
     getEnterprise, 
@@ -15,141 +17,98 @@ from bd import (
 )
 
 app = Flask(__name__)
-app.secret_key = 'chave_secreta'
+app.config['SECRET_KEY'] = 'sua_chave_secreta'
+app.config['JWT_SECRET_KEY'] = 'sua_chave_secreta_jwt'
+jwt = JWTManager(app)
 
-
-@app.route("/")
-def home():
-    return jsonify({"message": "Welcome to the API"})
-
-
+# Função de login para o funcionário
 @app.route("/login/employee", methods=['POST'])
 def loginEmployee():
-    data = request.json
-    if 'username' in data:
-        username = data['username']
-        password = data['password']
-        result = getEmployee(username, password)
-        data = result.json
+    username = request.json.get('username')
+    password = request.json.get('password')
+    result = getEmployee(username, password)
+    data = result.json
 
-        if username == 'admin' and password == 'password':
-            return jsonify({"message": "Admin login successful"}), 200
-        
-        elif data['message'] == "success":
-            session['id_user'] = data['id_user']
-            return jsonify({"message": "Employee login successful"}), 200
-        else:
-            return jsonify({"error": "Invalid credentials"}), 401
-            
-    elif 'new_username' in data:
-        new_username = data['new_username']
-        enterprise = data['enterprise']
-        position = data['position']
-        new_password = data['new_password']
-        confirm_password = data['confirm_password']
+    if username == 'admin' and password == 'password':
+        access_token = create_access_token(identity={'username': username})
+        return jsonify(access_token=access_token), 200
+    
+    elif data['message'] == "success":
+        access_token = create_access_token(identity={'username': username, 'id_user': data['id_user']})
+        return jsonify(access_token=access_token), 200
 
-        if new_password == confirm_password:
-            result = createEmployee(new_username, enterprise, position, new_password)
-            data = result.json
+    return jsonify({"message": "Invalid Credentials"}), 401
 
-            if data['message'] == "success":
-                return jsonify({"message": "User created successfully"}), 201
-            else:
-                return jsonify({"error": data["message"]}), 400
-        else:
-            return jsonify({"error": "Passwords don't match"}), 400
-
-
+# Função de login para a empresa
 @app.route("/login/enterprise", methods=['POST'])
 def loginEnterprise():
-    data = request.json
-    if 'company' in data:
-        company = data['company']
-        password = data['password']
-        result = getEnterprise(company, password)
-        data = result.json
+    company = request.json.get('company')
+    password = request.json.get('password')
+    result = getEnterprise(company, password)
+    data = result.json
 
-        if company == 'admin' and password == 'password':
-            return jsonify({"message": "Admin login successful"}), 200
-        
-        elif data['message'] == "success":
-            session['id_empresa'] = data['id_empresa']
-            return jsonify({"message": "Enterprise login successful"}), 200
-        else:
-            return jsonify({"error": data["message"]}), 401
-            
-    elif 'new_company' in data:
-        new_company = data['new_company']
-        new_password = data['new_password']
-        confirm_password = data['confirm_password']
+    if company == 'admin' and password == 'password':
+        access_token = create_access_token(identity={'company': company})
+        return jsonify(access_token=access_token), 200
+    
+    elif data['message'] == "success":
+        access_token = create_access_token(identity={'company': company, 'id_empresa': data['id_empresa']})
+        return jsonify(access_token=access_token), 200
 
-        if new_password == confirm_password:
-            result = createEnterprise(new_company, new_password)
-            data = result.json
-            return jsonify({"message": data["message"]}), 201
-        else:
-            return jsonify({"error": "Passwords don't match"}), 400
+    return jsonify({"message": data.get("message", "Invalid Credentials")}), 401
 
-
+# Rotas protegidas por JWT
 @app.route("/dashboard/employee", methods=['POST'])
+@jwt_required()
 def dashboardEmployee():
-    user_id = session.get('id_user')
-    if not user_id:
-        return jsonify({"error": "User not logged in"}), 403
-
-    result2 = checkFinalPoint(user_id, date.today())
+    current_user = get_jwt_identity()
+    result2 = checkFinalPoint(current_user['id_user'], date.today())
     data2 = result2.json
 
     if data2["message"] == "success":
-        ponto = getDayPoint(user_id, date.today())
+        ponto = getDayPoint(current_user['id_user'], date.today())
         dados = ponto.json
         result4 = finalPoint(dados['id_ponto'], getDatetime())
         data4 = result4.json
         if data4['message'] == "success":
-            return jsonify({"message": "Exit point recorded"}), 200
+            return jsonify({"message": "Exit Point"}), 200
     else:
-        result = startPoint(user_id, getDatetime())
-        return jsonify({"message": "Entry point recorded"}), 200
+        result = startPoint(current_user['id_user'], getDatetime())
+        return jsonify({"message": "Entry Point"}), 200
 
+    return jsonify({"message": "Error in processing point"}), 400
 
-@app.route("/dashboard/enterprise", methods=['GET', 'PUT', 'DELETE'])
+@app.route("/dashboard/enterprise", methods=['GET', 'POST', 'PUT', 'DELETE'])
+@jwt_required()
 def dashboardEnterprise():
-    company_id = session.get('id_empresa')
-    if not company_id:
-        return jsonify({"error": "Enterprise not logged in"}), 403
-
+    current_user = get_jwt_identity()
     if request.method == "GET":
-        result = getAllPoints(company_id)
-        pontos = result.json
-        return jsonify({"points": pontos}), 200
+        result = getAllPoints(current_user['id_empresa'])
+        return jsonify(result.json), 200
+
+    elif request.method == "POST":
+        # Processa criação de ponto ou outra lógica
+        pass
 
     elif request.method == "PUT":
-        data = request.json
-        id_ponto = data["id_ponto"]
-        hora_inicio = datetime.strptime(data["hora_inicio"], '%Y-%m-%dT%H:%M').strftime('%Y-%m-%d %H:%M:%S.%f')
-        hora_final = datetime.strptime(data["hora_final"], '%Y-%m-%dT%H:%M').strftime('%Y-%m-%d %H:%M:%S.%f')
+        id_ponto = request.json.get("id_ponto")
+        hora_inicio = request.json.get("hora_inicio")
+        hora_final = request.json.get("hora_final")
 
         result = editPoint(id_ponto, hora_inicio, hora_final)
-        data = result.json
-        if data['message'] == 'success':
-            return jsonify({"message": "Point updated successfully"}), 200
-        else:
-            return jsonify({"error": "Failed to update point"}), 400
+        if result.json.get('message') == 'success':
+            return jsonify({"message": "Point changed successfully"}), 200
 
     elif request.method == "DELETE":
-        id_ponto = request.json["id_ponto"]
+        id_ponto = request.json.get("id_ponto")
         result = deletePoint(id_ponto)
-        data = result.json
-        if data['message'] == 'success':
+        if result.json.get('message') == 'success':
             return jsonify({"message": "Point deleted successfully"}), 200
-        else:
-            return jsonify({"error": "Point not found"}), 404
 
+    return jsonify({"message": "Invalid request"}), 400
 
 def getDatetime():
-    agora = datetime.now()
-    return agora
-
+    return datetime.now()
 
 if __name__ == "__main__":
     app.run(debug=True, host='0.0.0.0')
