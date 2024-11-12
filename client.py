@@ -8,7 +8,6 @@ class ApiClient:
         self.token = None
     
     def _set_token(self, token):
-        """Define o token JWT para autenticação."""
         self.token = token
         self.session.headers.update({"Authorization": f"Bearer {self.token}"})
 
@@ -51,32 +50,24 @@ class ApiClient:
 if __name__ == "__main__":
     client = ApiClient()
 
-    # Teste do login para funcionário
+    # Teste para funcionários
     print("Teste de login de funcionário:")
     response = client.login_employee("kaua", "123")
     print(response)
-
-    # # Teste de login para empresa
-    # print("\nTeste de login de empresa:")
-    # response = client.login_enterprise("Creare", "123")
-    # print(response)
-
-    # Teste para registrar ponto de entrada
     print("\nTeste de registro de ponto de entrada:")
     response = client.record_entry_point()
     print(response)
 
-    # # Teste para obter todos os pontos
+    #Teste para empresas
+    # print("\nTeste de login de empresa:")
+    # response = client.login_enterprise("Creare", "123")
+    # print(response)
     # print("\nTeste para obter todos os pontos:")
     # response = client.get_all_points()
     # print(response)
-
-    # # Teste para atualizar ponto
     # print("\nTeste para atualizar ponto:")
     # response = client.update_point(1, "2024-01-01T08:00:00", "2024-01-01T17:00:00")
     # print(response)
-
-    # # Teste para deletar ponto
     # print("\nTeste para deletar ponto:")
     # response = client.delete_point(1)
     # print(response)
