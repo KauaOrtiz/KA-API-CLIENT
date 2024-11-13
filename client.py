@@ -18,11 +18,21 @@ class ApiClient:
             self._set_token(response.json()["access_token"])
         return response.json()
 
+    def register_employee(self, new_username, enterprise, position, new_password, confirm_password):
+        url = f"{BASE_URL}/register/employee"
+        response = self.session.post(url, json={"new_username": new_username, "enterprise": enterprise, "position": position, "new_password": new_password, "confirm_password": confirm_password,})
+        return response.json()
+
     def login_enterprise(self, company, password):
         url = f"{BASE_URL}/login/enterprise"
         response = self.session.post(url, json={"company": company, "password": password})
         if response.status_code == 200:
             self._set_token(response.json()["access_token"])
+        return response.json()
+
+    def register_enterprise(self, new_company, new_password, confirm_password):
+        url = f"{BASE_URL}/register/enterprise"
+        response = self.session.post(url, json={"new_company": new_company, "new_password": new_password, "confirm_password": confirm_password})
         return response.json()
 
     def record_entry_point(self):
@@ -50,24 +60,34 @@ class ApiClient:
 if __name__ == "__main__":
     client = ApiClient()
 
-    # Teste para funcionários
     # print("Teste de login de funcionário:")
     # response = client.login_employee("kaua", "123")
     # print(response)
-    print("\nTeste de registro de ponto de entrada:")
-    response = client.record_entry_point()
+
+    print("Teste de registro de funcionário:")
+    response = client.register_employee("klebinho", "Creare", "foda", "123", "123")
     print(response)
 
-    #Teste para empresas
+    # print("\nTeste de registro de ponto de entrada:")
+    # response = client.record_entry_point()
+    # print(response)
+
     # print("\nTeste de login de empresa:")
     # response = client.login_enterprise("Creare", "123")
     # print(response)
-    print("\nTeste para obter todos os pontos:")
-    response = client.get_all_points()
+
+    print("\nTeste de registro de empresa:")
+    response = client.register_enterprise("Boca", "123", "123")
     print(response)
-    print("\nTeste para atualizar ponto:")
-    response = client.update_point(1, "2024-01-01T08:00:00", "2024-01-01T17:00:00")
-    print(response)
-    print("\nTeste para deletar ponto:")
-    response = client.delete_point(1)
-    print(response)
+
+    # print("\nTeste para obter todos os pontos:")
+    # response = client.get_all_points()
+    # print(response)
+
+    # print("\nTeste para atualizar ponto:")
+    # response = client.update_point(1, "2024-01-01T08:00:00", "2024-01-01T17:00:00")
+    # print(response)
+
+    # print("\nTeste para deletar ponto:")
+    # response = client.delete_point(1)
+    # print(response)

@@ -58,6 +58,25 @@ def loginEmployee():
 
     return jsonify({"message": "Credenciais inválidas"}), 401
 
+@app.route("/register/employee", methods=['POST'])
+def registerEmployee():
+    new_username = request.json.get('new_username')
+    enterprise = request.json.get('enterprise')
+    position = request.json.get('position')
+    new_password = request.json.get('new_password')
+    confirm_password = request.json.get('confirm_password')
+
+    if new_password == confirm_password:
+        result = createEmployee(new_username, enterprise, position, new_password)
+        data = result.json
+    
+        if data['message'] == "success":
+            return jsonify({"message": "Login criado!"}), 200
+        else:
+            return jsonify({"message": "Credenciais inválidas"}), 401
+
+    return jsonify({"message": "Credenciais inválidas"}), 401
+
 # Função de login para a empresa
 @app.route("/login/enterprise", methods=['POST'])
 def loginEnterprise():
@@ -73,6 +92,23 @@ def loginEnterprise():
     elif data['message'] == "success":
         access_token = create_access_token(identity={'company': company, 'id_empresa': data['id_empresa']})
         return jsonify(access_token=access_token), 200
+
+    return jsonify({"message": data.get("message", "Credenciais inválidas")}), 401
+
+@app.route("/register/enterprise", methods=['POST'])
+def registerEnterprise():
+    new_company = request.json.get('new_company')
+    new_password = request.json.get('new_password')
+    confirm_password = request.json.get('confirm_password')
+
+    if new_password == confirm_password:
+        result = createEnterprise(new_company, new_password)
+        data = result.json
+    
+        if data['message'] == "success":
+            return jsonify({"message": "Empresa criada"}), 200
+        else:
+            return jsonify({"message":"Credenciais inválidas"}), 401
 
     return jsonify({"message": data.get("message", "Credenciais inválidas")}), 401
 

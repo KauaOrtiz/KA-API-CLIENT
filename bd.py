@@ -82,7 +82,7 @@ def createEnterprise(enterpriseName, password):
     cur.close()
     conn.close()
 
-    return jsonify({"message": "Enterprise create! Login now!", "id_empresa": companyId})
+    return jsonify({"message": "success", "id_empresa": companyId})
 
 def checkFinalPoint(userId, data):
     conn = getDBConnection()
