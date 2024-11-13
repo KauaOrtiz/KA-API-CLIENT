@@ -1,5 +1,7 @@
 from flask import Flask, json, request, jsonify
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    JWTManager, create_access_token, jwt_required, get_jwt_identity, jwt_required, get_jwt_identity
+)
 from datetime import datetime, date, timedelta
 
 from bd import (
@@ -21,6 +23,23 @@ app.config['SECRET_KEY'] = 'sua_chave_secreta'
 app.config['JWT_SECRET_KEY'] = 'sua_chave_secreta_jwt'
 jwt = JWTManager(app)
 
+# Tratativas para erros de JWT
+@jwt.unauthorized_loader
+def unauthorized_callback(callback):
+    return jsonify({"message": "Token não foi fornecido. Por favor, faça login para continuar."}), 401
+
+@jwt.invalid_token_loader
+def invalid_token_callback(callback):
+    return jsonify({"message": "Token inválido. Por favor, faça login novamente."}), 422
+
+@jwt.expired_token_loader
+def expired_token_callback(callback, expired):
+    return jsonify({"message": "O token expirou. Por favor, faça login novamente."}), 401
+
+@jwt.revoked_token_loader
+def revoked_token_callback(callback):
+    return jsonify({"message": "O token foi revogado. Por favor, faça login novamente."}), 401
+
 # Função de login para o funcionário
 @app.route("/login/employee", methods=['POST'])
 def loginEmployee():
@@ -37,7 +56,7 @@ def loginEmployee():
         access_token = create_access_token(identity={'username': username, 'id_user': data['id_user']})
         return jsonify(access_token=access_token), 200
 
-    return jsonify({"message": "Invalid Credentials"}), 401
+    return jsonify({"message": "Credenciais inválidas"}), 401
 
 # Função de login para a empresa
 @app.route("/login/enterprise", methods=['POST'])
@@ -55,7 +74,7 @@ def loginEnterprise():
         access_token = create_access_token(identity={'company': company, 'id_empresa': data['id_empresa']})
         return jsonify(access_token=access_token), 200
 
-    return jsonify({"message": data.get("message", "Invalid Credentials")}), 401
+    return jsonify({"message": data.get("message", "Credenciais inválidas")}), 401
 
 # Rotas protegidas por JWT
 @app.route("/dashboard/employee", methods=['POST'])
@@ -71,12 +90,12 @@ def dashboardEmployee():
         result4 = finalPoint(dados['id_ponto'], getDatetime())
         data4 = result4.json
         if data4['message'] == "success":
-            return jsonify({"message": "Exit Point"}), 200
+            return jsonify({"message": "Ponto de saída registrado"}), 200
     else:
         result = startPoint(current_user['id_user'], getDatetime())
-        return jsonify({"message": "Entry Point"}), 200
+        return jsonify({"message": "Ponto de entrada registrado"}), 200
 
-    return jsonify({"message": "Error in processing point"}), 400
+    return jsonify({"message": "Erro ao processar ponto"}), 400
 
 @app.route("/dashboard/enterprise", methods=['GET', 'POST', 'PUT', 'DELETE'])
 @jwt_required()
@@ -97,15 +116,15 @@ def dashboardEnterprise():
 
         result = editPoint(id_ponto, hora_inicio, hora_final)
         if result.json.get('message') == 'success':
-            return jsonify({"message": "Point changed successfully"}), 200
+            return jsonify({"message": "Ponto atualizado com sucesso"}), 200
 
     elif request.method == "DELETE":
         id_ponto = request.json.get("id_ponto")
         result = deletePoint(id_ponto)
         if result.json.get('message') == 'success':
-            return jsonify({"message": "Point deleted successfully"}), 200
+            return jsonify({"message": "Ponto deletado com sucesso"}), 200
 
-    return jsonify({"message": "Invalid request"}), 400
+    return jsonify({"message": "Requisição inválida"}), 400
 
 def getDatetime():
     return datetime.now()
