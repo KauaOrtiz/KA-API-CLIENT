@@ -1,9 +1,9 @@
-from flask import Flask, json, request, jsonify
+from flask import Flask, request, jsonify
 from flask_jwt_extended import (
-    JWTManager, create_access_token, jwt_required, get_jwt_identity, jwt_required, get_jwt_identity
+    JWTManager, create_access_token, jwt_required, get_jwt_identity, jwt_required
 )
-from datetime import datetime, date, timedelta
-
+from datetime import datetime, date
+from flask_cors import CORS
 from bd import (
     createEnterprise, 
     getEnterprise, 
@@ -22,6 +22,7 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'sua_chave_secreta'
 app.config['JWT_SECRET_KEY'] = 'sua_chave_secreta_jwt'
 jwt = JWTManager(app)
+CORS(app, supports_credentials=True)
 
 # Tratativas para erros de JWT
 @jwt.unauthorized_loader
@@ -69,7 +70,7 @@ def registerEmployee():
     if new_password == confirm_password:
         result = createEmployee(new_username, enterprise, position, new_password)
         data = result.json
-    
+        print(data)
         if data['message'] == "success":
             return jsonify({"message": "Login criado!"}), 200
         else:
@@ -104,7 +105,7 @@ def registerEnterprise():
     if new_password == confirm_password:
         result = createEnterprise(new_company, new_password)
         data = result.json
-    
+        print(data)
         if data['message'] == "success":
             return jsonify({"message": "Empresa criada"}), 200
         else:
@@ -140,10 +141,6 @@ def dashboardEnterprise():
     if request.method == "GET":
         result = getAllPoints(current_user['id_empresa'])
         return jsonify(result.json), 200
-
-    elif request.method == "POST":
-        # Processa criação de ponto ou outra lógica
-        pass
 
     elif request.method == "PUT":
         id_ponto = request.json.get("id_ponto")
